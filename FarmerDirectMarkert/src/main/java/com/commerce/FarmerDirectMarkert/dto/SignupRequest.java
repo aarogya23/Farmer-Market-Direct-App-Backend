@@ -11,7 +11,7 @@ import lombok.Data;
 @Data
 public class SignupRequest {
 
-    @NotBlank(message = "Full name is reuired")
+    @NotBlank(message = "Full name is required")
     private String fullName;
 
 
@@ -19,8 +19,8 @@ public class SignupRequest {
     @Email(message = "Invalid email format")
     private String email;
 
-    @NotBlank(message = "Password is reuired")
-    @Size(min = 6, message="password must be at least 6 charaters")
+    @NotBlank(message = "Password is required")
+    @Size(min = 6, message="Password must be at least 6 characters")
     private String password;
 
     @NotNull(message = "Role is required (Farmer, Buyer, or Admin)")
