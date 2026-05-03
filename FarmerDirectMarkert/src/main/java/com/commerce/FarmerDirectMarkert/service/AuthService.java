@@ -11,6 +11,10 @@ import com.commerce.FarmerDirectMarkert.dto.SignupRequest;
 import com.commerce.FarmerDirectMarkert.model.User;
 import com.commerce.FarmerDirectMarkert.repository.UserRepository;
 
+import com.commerce.FarmerDirectMarkert.dto.GoogleLoginRequest;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import java.util.UUID;
+
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -21,6 +25,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final GoogleTokenVerifierService googleTokenVerifierService;
  
     // ── Signup ────────────────────────────────────────────────────────────────
     public AuthResponse signup(SignupRequest request) {
@@ -89,15 +94,61 @@ public class AuthService {
     }
 
     // Add this to AuthService.java after the login method
-public AuthResponse getMe(String email) {
-    User user = userRepository.findByEmail(email)
-            .orElseThrow(() -> new RuntimeException("User not found"));
-    
-    return AuthResponse.builder()
-            .userId(user.getId())
-            .fullName(user.getFullName())
-            .email(user.getEmail())
-            .role(user.getRole())
-            .build();
-}
+    public AuthResponse getMe(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        return AuthResponse.builder()
+                .userId(user.getId())
+                .fullName(user.getFullName())
+                .email(user.getEmail())
+                .role(user.getRole())
+                .build();
+    }
+
+    // ── Google Login ──────────────────────────────────────────────────────────
+    public AuthResponse googleLogin(GoogleLoginRequest request) {
+        // 1. Verify token with Google
+        GoogleIdToken.Payload payload = googleTokenVerifierService.verifyToken(request.getIdToken());
+
+        // 2. Extract user information
+        String email = payload.getEmail();
+        String name = (String) payload.get("name");
+
+        // 3. Find existing user by email
+        User user = userRepository.findByEmail(email).orElse(null);
+
+        if (user == null) {
+            // New user, register them automatically
+            User.Role role = request.getRole() != null ? request.getRole() : User.Role.BUYER;
+            user = User.builder()
+                    .fullName(name != null ? name : "Google User")
+                    .email(email)
+                    // Generate a random, long password as they will use Google to sign in
+                    .password(passwordEncoder.encode(UUID.randomUUID().toString()))
+                    .role(role)
+                    .build();
+            user = userRepository.save(user);
+        }
+
+        // 4. Generate standard JWT
+        org.springframework.security.core.userdetails.User userDetails =
+                new org.springframework.security.core.userdetails.User(
+                        user.getEmail(),
+                        user.getPassword(),
+                        java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority(
+                                "ROLE_" + user.getRole().name()))
+                );
+
+        String token = jwtService.generateToken(userDetails);
+
+        return AuthResponse.builder()
+                .token(token)
+                .tokenType("Bearer")
+                .userId(user.getId())
+                .fullName(user.getFullName())
+                .email(user.getEmail())
+                .role(user.getRole())
+                .build();
+    }
 }

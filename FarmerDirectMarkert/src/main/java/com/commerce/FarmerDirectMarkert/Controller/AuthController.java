@@ -42,6 +42,13 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/google")
+    public ResponseEntity<AuthResponse> googleLogin(@Valid @RequestBody com.commerce.FarmerDirectMarkert.dto.GoogleLoginRequest request) {
+        AuthResponse response = authService.googleLogin(request);
+        return ResponseEntity.ok(response);
+    }
+
+
 
     @GetMapping("/me")
     public ResponseEntity<AuthResponse> me(@AuthenticationPrincipal UserDetails userDetails) {

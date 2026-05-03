@@ -53,6 +53,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // Public endpoints
                 .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/api/products/test", "/api/products/allProducts").permitAll()
                 // Everything else requires authentication
                 .anyRequest().authenticated()
             )
