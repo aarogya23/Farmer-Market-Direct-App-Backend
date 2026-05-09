@@ -1,4 +1,4 @@
-package com.commerce.FarmerDirectMarkert.websocket;
+package com.commerce.FarmerDirectMarkert.service;
 
 import com.commerce.FarmerDirectMarkert.dto.ChatMessageResponse;
 import com.commerce.FarmerDirectMarkert.service.Customuserdetailsservice;
