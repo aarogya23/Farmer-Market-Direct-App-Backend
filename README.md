@@ -1,99 +1,189 @@
 # Farmer Market Direct App - Backend
 
-## 📖 Description
-This is the backend service for the Farmer Market Direct App.  
-It provides REST APIs for managing users, products, and orders, and uses JWT-based authentication for secure access.
+## Description
+This is the Spring Boot backend for the Farmer Market Direct App.
 
----
+It provides:
+- JWT-based authentication
+- role-based access for `ADMIN`, `FARMER`, and `BUYER`
+- product creation and approval workflows
+- image upload support
+- simple real-time chat using REST + WebSocket
 
-## 🛠️ Tech Stack
-- Java 17 (JDK 17)
-- Spring Boot
+## Tech Stack
+- Java 17
+- Spring Boot 3
 - Spring Security
-- JWT Authentication
-- MySQL Database
+- Spring Data JPA
+- JWT
+- MySQL
 - Maven
+- WebSocket
 
----
+## Current Features
+- User signup and login
+- Google login
+- Authenticated profile lookup with `/api/auth/me`
+- Farmer product creation
+- Public product listing and search
+- Farmer-specific product listing
+- Admin product approval and rejection
+- Product image upload
+- Real-time chat delivery through WebSocket
+- Online status check for chat users
 
-## ✨ Features
-- User Registration & Login
-- JWT Token-based Authentication & Authorization
-- Role-based access (Admin / Farmer / User)
-- Product Management APIs
-- Order Management System
-- Secure REST APIs
+## Roles
+- `ADMIN`: reviews and updates product approval status
+- `FARMER`: adds and manages products
+- `BUYER`: browses products and can participate in chat
 
----
+## Authentication
+This project uses JWT for protected APIs.
 
-## 🔐 Authentication
-This project uses **JWT (JSON Web Token)** for securing APIs.
+After login, include the token in the request header:
 
-- After login, a JWT token is generated
-- The token must be included in headers:
-  
+```http
 Authorization: Bearer <your_token>
+```
 
----
+## Project Structure
+The source code lives under `FarmerDirectMarkert/src/main/java/com/commerce/FarmerDirectMarkert`.
 
-## 📂 Project Structure
-/src
- ├── controller   → REST Controllers
- ├── service      → Business Logic
- ├── repository   → Database Layer
- ├── model        → Entity Classes
- ├── security     → JWT & Security Config
- └── dto          → Data Transfer Objects
+```text
+FarmerDirectMarkert/src/main/java/com/commerce/FarmerDirectMarkert
+├── Controller   # REST controllers
+├── config       # Spring MVC, security, and websocket configuration
+├── dto          # Request and response payloads
+├── model        # JPA entities and enums
+├── repository   # Spring Data repositories
+├── security     # JWT request filter
+├── service      # Business logic
+└── websocket    # WebSocket handler
+```
 
----
+Resources are under `FarmerDirectMarkert/src/main/resources`.
 
-## ⚙️ Setup Instructions
+## Setup
 
-### 1. Clone Repository
+### 1. Clone the repository
+```bash
 git clone https://github.com/aarogya23/Farmer-Market-Direct-App.git
+```
 
-### 2. Navigate to Backend
-cd server
+### 2. Navigate to the backend project
+```bash
+cd Farmer-Market-Direct-App-Backend
+```
 
-### 3. Configure Database
-Update `application.properties`:
+### 3. Configure the database
+Update `FarmerDirectMarkert/src/main/resources/application.properties` if needed:
 
-spring.datasource.url=jdbc:mysql://localhost:3306/farmer_db  
-spring.datasource.username=root  
-spring.datasource.password=yourpassword  
+```properties
+server.port=8082
+spring.datasource.url=jdbc:mysql://localhost:3306/farmer_direct_market?createDatabaseIfNotExist=true&serverTimezone=UTC&useSSL=false
+spring.datasource.username=root
+spring.datasource.password=
+spring.jpa.hibernate.ddl-auto=update
+```
 
----
+### 4. Run the application
+If Maven is installed:
 
-### 4. Run Application
-./mvnw spring-boot:run
-
-OR (Windows)
+```bash
 mvn spring-boot:run
+```
 
----
+On Windows with the Maven wrapper:
 
-## 🔌 API Sample
+```powershell
+.\mvnw.cmd spring-boot:run
+```
 
-### Login
-POST /api/auth/login
+## Main API Endpoints
 
-### Get Products
-GET /api/products
+### Authentication
+- `POST /api/auth/signup`
+- `POST /api/auth/login`
+- `POST /api/auth/google`
+- `GET /api/auth/me`
 
-### Add Product (Protected)
-POST /api/products
+### Products
+- `POST /api/products`
+- `GET /api/products/test`
+- `GET /api/products/allProducts`
+- `GET /api/products/my-products`
 
----
+### Product Images
+- `POST /api/products/upload-image`
+- `GET /uploads/{filename}`
 
-## 🧠 Future Improvements
-- Payment Integration
-- Real-time notifications
-- Image upload support
-- Deployment (Docker + Cloud)
+### Admin Product Review
+- `GET /api/admin/products/pending`
+- `PATCH /api/admin/products/{id}/status`
 
----
+### Chat
+- `POST /api/chat/send`
+- `GET /api/chat/online/{email}`
 
-## 🤝 Contributing
-Feel free to fork and contribute to this project.
+## Product Search
+`GET /api/products/test` supports optional query parameters:
 
----
+- `q`
+- `category`
+- `minPrice`
+- `maxPrice`
+- `sort`
+
+Example:
+
+```http
+GET /api/products/test?q=tomato&category=VEGETABLES&minPrice=10&maxPrice=100&sort=newest
+```
+
+## Chat and WebSocket
+This backend uses a simple chat flow:
+
+- REST API sends the message
+- WebSocket pushes the live update to connected users
+
+### WebSocket endpoint
+```text
+ws://localhost:8082/ws/chat?token=<jwt>
+```
+
+### Send chat message
+```http
+POST /api/chat/send
+Authorization: Bearer <jwt>
+Content-Type: application/json
+```
+
+```json
+{
+  "recipientEmail": "buyer@example.com",
+  "content": "Hello"
+}
+```
+
+When both users are connected to the WebSocket endpoint, the sender and recipient both receive the same live message payload.
+
+## File Upload Notes
+- Uploaded images are stored in the local `uploads/` folder
+- Uploaded files are served through `/uploads/**`
+- Multipart upload size is limited to `10MB`
+
+## Important Notes
+- The application currently runs on port `8082`
+- The database name in the current configuration is `farmer_direct_market`
+- Google OAuth client values are read from `application.properties`
+- The image upload controller currently builds image URLs with a hardcoded host, so that should be adjusted before deployment
+
+## Future Improvements
+- Persist chat history in the database
+- Improve websocket presence and delivery acknowledgements
+- Replace hardcoded upload host with configurable base URL
+- Add global exception handling for chat APIs
+- Add Docker support and deployment configuration
+
+## Contributing
+Feel free to fork the repository and contribute improvements.
