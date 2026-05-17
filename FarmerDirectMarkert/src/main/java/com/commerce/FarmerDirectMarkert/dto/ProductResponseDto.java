@@ -21,4 +21,6 @@ public class ProductResponseDto {
     private String farmerEmail;
     private String farmerName;
     private LocalDateTime createdAt;
+    private com.commerce.FarmerDirectMarkert.model.ProductStatus status;
+    private String imageUrl;
 }

@@ -16,4 +16,5 @@ public class ProductRequestDto {
     private Double price;
     private Integer quantity;
     private Category category;
+    private String imageUrl;
 }
