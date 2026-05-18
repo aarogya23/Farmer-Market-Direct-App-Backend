@@ -3,6 +3,7 @@ package com.commerce.FarmerDirectMarkert.Controller;
 import com.commerce.FarmerDirectMarkert.dto.ChatMessageRequest;
 import com.commerce.FarmerDirectMarkert.dto.ChatMessageResponse;
 import com.commerce.FarmerDirectMarkert.dto.ChatUserDto;
+import com.commerce.FarmerDirectMarkert.dto.ConversationResponseDto;
 import com.commerce.FarmerDirectMarkert.dto.MessageApprovalRequestDto;
 import com.commerce.FarmerDirectMarkert.dto.MessageApprovalResponseDto;
 import com.commerce.FarmerDirectMarkert.service.ChatService;
@@ -62,6 +63,28 @@ public class ChatController {
         }
 
         return ResponseEntity.ok(chatService.getChatUsers(userDetails.getUsername()));
+    }
+
+    @GetMapping("/conversation/{email}")
+    public ResponseEntity<ConversationResponseDto> getConversation(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable String email
+    ) {
+        if (userDetails == null) {
+            throw new RuntimeException("You are not authenticated. Please login first.");
+        }
+
+        try {
+            String approvalStatus = chatService.getApprovalStatus(userDetails.getUsername(), email);
+            List<ChatMessageResponse> messages = chatService.getConversationHistory(userDetails.getUsername(), email);
+            
+            return ResponseEntity.ok(ConversationResponseDto.builder()
+                    .approvalStatus(approvalStatus)
+                    .messages(messages)
+                    .build());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        }
     }
 
     // ==================== Message Approval Request Endpoints ====================
