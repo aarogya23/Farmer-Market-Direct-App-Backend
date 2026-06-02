@@ -119,4 +119,48 @@ public class AdminNotificationController {
         List<AdminNotificationDto> notifications = notificationService.getNotificationsByRole(role);
         return ResponseEntity.ok(notifications);
     }
+
+    /**
+     * Send direct message to all buyers, all farmers, or individual users
+     * POST /api/admin/notifications/send-direct
+     */
+    @PostMapping("/send-direct")
+    public ResponseEntity<Map<String, Object>> sendDirectMessage(
+            @Valid @RequestBody SendNotificationRequest request) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String adminEmail = authentication.getName();
+
+        Map<String, Object> result = notificationService.sendDirectMessage(request, adminEmail);
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * Send message to all users of a specific role
+     * POST /api/admin/notifications/send-to-role/{role}
+     */
+    @PostMapping("/send-to-role/{role}")
+    public ResponseEntity<Map<String, Object>> sendToRole(
+            @PathVariable String role,
+            @Valid @RequestBody SendNotificationRequest request) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String adminEmail = authentication.getName();
+
+        request.setTargetRoles(java.util.Collections.singletonList(role));
+        Map<String, Object> result = notificationService.sendDirectMessage(request, adminEmail);
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * Send message to specific users
+     * POST /api/admin/notifications/send-to-users
+     */
+    @PostMapping("/send-to-users")
+    public ResponseEntity<Map<String, Object>> sendToUsers(
+            @Valid @RequestBody SendNotificationRequest request) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String adminEmail = authentication.getName();
+
+        Map<String, Object> result = notificationService.sendDirectMessage(request, adminEmail);
+        return ResponseEntity.ok(result);
+    }
 }
