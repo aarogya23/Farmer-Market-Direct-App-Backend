@@ -7,7 +7,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import jakarta.validation.Valid;
 import java.util.List;
 
@@ -24,12 +26,11 @@ public class OrderController {
      */
     @PostMapping("/create")
     public ResponseEntity<OrderDto> createOrder(
-            @RequestHeader("Authorization") String token,
+            Authentication authentication,
             @Valid @RequestBody CreateOrderRequest request) {
         log.info("Creating new order");
         try {
-            // Extract email from token or use authenticated user
-            String buyerEmail = extractEmailFromToken(token);
+            String buyerEmail = getCurrentUserEmail(authentication);
             OrderDto order = orderService.createOrder(buyerEmail, request);
             return ResponseEntity.status(HttpStatus.CREATED).body(order);
         } catch (Exception e) {
@@ -43,9 +44,9 @@ public class OrderController {
      */
     @GetMapping("/my-orders")
     public ResponseEntity<List<OrderDto>> getMyOrders(
-            @RequestHeader("Authorization") String token) {
+            Authentication authentication) {
         try {
-            String buyerEmail = extractEmailFromToken(token);
+            String buyerEmail = getCurrentUserEmail(authentication);
             List<OrderDto> orders = orderService.getBuyerOrders(buyerEmail);
             return ResponseEntity.ok(orders);
         } catch (Exception e) {
@@ -83,6 +84,41 @@ public class OrderController {
     }
 
     /**
+     * Assign a third-party driver to collect and deliver the order.
+     */
+    @PostMapping("/{orderId}/assign-driver")
+    public ResponseEntity<OrderDto> assignDriver(
+            Authentication authentication,
+            @PathVariable Long orderId,
+            @Valid @RequestBody AssignDriverRequest request) {
+        try {
+            String userEmail = getCurrentUserEmail(authentication);
+            OrderDto order = orderService.assignDriverToOrder(userEmail, orderId, request);
+            return ResponseEntity.ok(order);
+        } catch (Exception e) {
+            log.error("Error assigning driver", e);
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    /**
+     * Record that the assigned driver has picked up the order and is en route.
+     */
+    @PatchMapping("/{orderId}/driver/pickup")
+    public ResponseEntity<PickupConfirmationDto> markDriverPickup(
+            Authentication authentication,
+            @PathVariable Long orderId) {
+        try {
+            String userEmail = getCurrentUserEmail(authentication);
+            PickupConfirmationDto order = orderService.markOrderPickedUp(userEmail, orderId);
+            return ResponseEntity.ok(order);
+        } catch (Exception e) {
+            log.error("Error marking driver pickup", e);
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    /**
      * Update order status (Admin/Farmer)
      */
     @PatchMapping("/{orderId}/status")
@@ -113,6 +149,55 @@ public class OrderController {
     }
 
     /**
+     * Buyer completes a shipped order and uploads PDF receipt for admin verification.
+     */
+    @PostMapping("/{orderId}/complete-with-receipt")
+    public ResponseEntity<OrderDto> completeOrderWithReceipt(
+            Authentication authentication,
+            @PathVariable Long orderId,
+            @RequestParam("file") MultipartFile file) {
+        try {
+            String buyerEmail = getCurrentUserEmail(authentication);
+            OrderDto order = orderService.completeOrderWithReceipt(buyerEmail, orderId, file);
+            return ResponseEntity.ok(order);
+        } catch (Exception e) {
+            log.error("Error completing order with receipt", e);
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    /**
+     * Admin verifies a submitted receipt.
+     */
+    @PatchMapping("/{orderId}/verify-receipt")
+    public ResponseEntity<OrderDto> verifyReceipt(
+            Authentication authentication,
+            @PathVariable Long orderId) {
+        try {
+            String adminEmail = getCurrentUserEmail(authentication);
+            OrderDto order = orderService.verifyReceipt(adminEmail, orderId);
+            return ResponseEntity.ok(order);
+        } catch (Exception e) {
+            log.error("Error verifying receipt", e);
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    /**
+     * Admin: list delivered orders with receipts pending verification.
+     */
+    @GetMapping("/receipts/pending-verification")
+    public ResponseEntity<List<OrderDto>> getPendingReceiptVerifications(Authentication authentication) {
+        try {
+            String adminEmail = getCurrentUserEmail(authentication);
+            return ResponseEntity.ok(orderService.getOrdersPendingReceiptVerification(adminEmail));
+        } catch (Exception e) {
+            log.error("Error fetching pending receipt verifications", e);
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    /**
      * Delete an order (only if pending)
      */
     @DeleteMapping("/{orderId}")
@@ -126,17 +211,10 @@ public class OrderController {
         }
     }
 
-    /**
-     * Helper method to extract email from token
-     * This is a placeholder - implement based on your JWT structure
-     */
-    private String extractEmailFromToken(String token) {
-        // Remove "Bearer " prefix if present
-        if (token.startsWith("Bearer ")) {
-            token = token.substring(7);
+    private String getCurrentUserEmail(Authentication authentication) {
+        if (authentication == null || authentication.getName() == null) {
+            throw new RuntimeException("Authenticated user not found");
         }
-        // Implement your JWT parsing logic here
-        // For now, returning a placeholder
-        return "buyer@example.com";
+        return authentication.getName();
     }
 }
