@@ -11,9 +11,13 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.view.RedirectView;
 
 import com.commerce.FarmerDirectMarkert.dto.AuthResponse;
+import com.commerce.FarmerDirectMarkert.dto.ForgotPasswordRequest;
 import com.commerce.FarmerDirectMarkert.dto.GoogleLoginRequest;
 import com.commerce.FarmerDirectMarkert.dto.LoginRequest;
+import com.commerce.FarmerDirectMarkert.dto.PasswordResetResponse;
+import com.commerce.FarmerDirectMarkert.dto.ResetPasswordRequest;
 import com.commerce.FarmerDirectMarkert.dto.SignupRequest;
+import com.commerce.FarmerDirectMarkert.dto.VerifyResetTokenRequest;
 import com.commerce.FarmerDirectMarkert.model.User;
 import com.commerce.FarmerDirectMarkert.service.AuthService;
 
@@ -59,6 +63,24 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         AuthResponse response = authService.login(request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<PasswordResetResponse> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        PasswordResetResponse response = authService.forgotPassword(request.getEmail());
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/verify-reset-token")
+    public ResponseEntity<PasswordResetResponse> verifyResetToken(@Valid @RequestBody VerifyResetTokenRequest request) {
+        PasswordResetResponse response = authService.verifyResetToken(request.getToken());
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<PasswordResetResponse> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        PasswordResetResponse response = authService.resetPassword(request);
         return ResponseEntity.ok(response);
     }
 
